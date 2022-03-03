@@ -81,7 +81,7 @@ def allow_initializer_layout(init_method):
     the annotated __init__ method.
   """
 
-  def decorated(layer_instance, *args, **kwargs):
+  def _wrap_function(layer_instance, *args, **kwargs):
     signature = inspect.signature(init_method)
     layout_args = {}
     # Check args like 'kernel_initializer' and pop the 'kernel_layout' if it
@@ -98,7 +98,9 @@ def allow_initializer_layout(init_method):
     for layout_param_name, layout in layout_args.items():
       setattr(layer_instance, layout_param_name, layout)
 
-  return decorated
+  # return decorated
+  return tf.__internal__.decorator.make_decorator(
+      target=init_method, decorator_func=_wrap_function)
 
 
 def call_with_layout(fn, layout, *args, **kwargs):
