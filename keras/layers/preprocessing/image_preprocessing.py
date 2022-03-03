@@ -260,6 +260,11 @@ class BaseImageAugmentationLayer(base_layer.BaseRandomLayer):
   mode, unpack the inputs, forward to the correct function, and pack the output
   back to the same structure as the inputs.
 
+  By default the `call()` method leverages the `tf.map_fn()` function.
+  Auto vectorization can be enabled by setting the `auto_vectorize=True`
+  attribute in your `__init__()` method.  When enabled, `call()` instead relies
+  on `tf.vectorized_map()`.
+
   Example:
 
   ```python
@@ -284,6 +289,13 @@ class BaseImageAugmentationLayer(base_layer.BaseRandomLayer):
   def __init__(self, rate=1.0, seed=None, **kwargs):
     super().__init__(seed=seed, **kwargs)
     self.rate = rate
+    self.auto_vectorize = False
+
+  def _map_fn(self):
+    if self.auto_vectorize:
+      return tf.vectorized_map
+    else:
+      return tf.map_fn
 
   @doc_controls.for_subclass_implementers
   def augment_image(self, image, transformation=None):
@@ -377,7 +389,7 @@ class BaseImageAugmentationLayer(base_layer.BaseRandomLayer):
     return result
 
   def _batch_augment(self, inputs):
-    return tf.map_fn(self._augment, inputs)
+    return self._map_fn()(self._augment, inputs)
 
   def _format_inputs(self, inputs):
     if tf.is_tensor(inputs):
